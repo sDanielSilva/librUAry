@@ -1,56 +1,42 @@
 package com.example.libruary.api
 
-import com.example.libruary.models.*
-import okhttp3.OkHttpClient
-import okhttp3.logging.HttpLoggingInterceptor
-import retrofit2.Call
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
-import retrofit2.http.*
+import android.content.Context
+import com.android.volley.Request
+import com.android.volley.RequestQueue
+import com.android.volley.toolbox.Volley
 
-interface ApiService {
+class ApiClient(context: Context) {
+    companion object {
+        private const val BASE_URL = "https://api-libruary.vercel.app/"
+        private var instance: ApiClient? = null
+        private var requestQueue: RequestQueue? = null
 
-    @POST("register")
-    fun registerUser(@Body registerRequest: RegisterRequest): Call<RegisterResponse>
+        @Synchronized
+        fun getInstance(context: Context): ApiClient {
+            if (instance == null) {
+                instance = ApiClient(context)
+            }
+            return instance!!
+        }
 
-    @POST("login")
-    fun loginUser(@Body loginRequest: LoginRequest): Call<LoginResponse>
-
-    @GET("books")
-    fun getBooks(@Query("query") query: String): Call<BookResponse>
-
-    @GET("books/{id}")
-    fun getBookDetails(@Path("id") id: Int): Call<Book>
-
-    @POST("books/{id}/reviews")
-    fun addReview(@Path("id") id: Int, @Body review: Review): Call<Void>
-
-    @GET("books/{id}/reviews")
-    fun getBookReviews(@Path("id") id: Int): Call<ReviewResponse>
-
-    @GET("user")
-    fun getUserProfile(): Call<User>
-
-    @GET("user/reviews")
-    fun getUserReviews(): Call<ReviewResponse>
-}
-
-object ApiClient {
-    private const val BASE_URL = "https://api-libruary.vercel.app/"
-
-    private val loggingInterceptor = HttpLoggingInterceptor().apply {
-        level = HttpLoggingInterceptor.Level.BODY
+        @Synchronized
+        fun getRequestQueue(context: Context): RequestQueue {
+            if (requestQueue == null) {
+                requestQueue = Volley.newRequestQueue(context.applicationContext)
+            }
+            return requestQueue!!
+        }
     }
 
-    private val client = OkHttpClient.Builder()
-        .addInterceptor(loggingInterceptor)
-        .build()
+    init {
+        requestQueue = getRequestQueue(context)
+    }
 
-    private val retrofit = Retrofit.Builder()
-        .baseUrl(BASE_URL)
-        .client(client)
-        .addConverterFactory(GsonConverterFactory.create())
-        .build()
+    fun <T> addToRequestQueue(req: Request<T>) {
+        requestQueue?.add(req)
+    }
 
-    val apiService: ApiService = retrofit.create(ApiService::class.java)
+    fun getFullUrl(path: String): String {
+        return BASE_URL + path
+    }
 }

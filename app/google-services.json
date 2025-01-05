@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "466484259878",
+    "project_id": "libruary-80bfc",
+    "storage_bucket": "libruary-80bfc.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:466484259878:android:5843984227c75e7ed10ae7",
+        "android_client_info": {
+          "package_name": "com.example.libruary"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "YOUR_API_KEY_HERE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

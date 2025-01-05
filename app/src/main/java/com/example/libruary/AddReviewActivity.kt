@@ -1,17 +1,20 @@
+// AddReviewActivity.kt
 package com.example.libruary
 
+import android.app.Activity
+import android.content.Context
 import android.os.Bundle
+import android.util.Log
 import android.widget.Button
 import android.widget.EditText
 import android.widget.RatingBar
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.android.volley.Request
+import com.android.volley.Response
+import com.android.volley.toolbox.JsonObjectRequest
 import com.example.libruary.api.ApiClient
-import com.example.libruary.models.*
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
-
+import org.json.JSONObject
 
 class AddReviewActivity : AppCompatActivity() {
 
@@ -33,29 +36,51 @@ class AddReviewActivity : AppCompatActivity() {
         submitReviewButton.setOnClickListener {
             val review = reviewText.text.toString().trim()
             val rating = ratingBar.rating.toInt()
+            val sharedPreferences = getSharedPreferences("LibruaryPrefs", Context.MODE_PRIVATE)
+            val authToken = sharedPreferences.getString("authToken", null)
+            val userId = sharedPreferences.getInt("userId", -1)
 
-            if (review.isNotEmpty() && rating > 0) {
-                addReview(bookId, review, rating)
+            if (review.isNotEmpty() && rating > 0 && authToken != null) {
+                addReview(bookId, userId, review, rating, authToken)
             } else {
-                Toast.makeText(this, "Please fill all fields and provide a rating", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Please fill in all fields and provide a rating", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
-    private fun addReview(bookId: Int, review: String, rating: Int) {
-        ApiClient.apiService.addReview(bookId, Review(review, rating)).enqueue(object : Callback<Void> {
-            override fun onResponse(call: Call<Void>, response: Response<Void>) {
-                if (response.isSuccessful) {
-                    Toast.makeText(this@AddReviewActivity, "Review added successfully!", Toast.LENGTH_SHORT).show()
-                    finish()
-                } else {
-                    Toast.makeText(this@AddReviewActivity, "Failed to add review: ${response.message()}", Toast.LENGTH_SHORT).show()
-                }
-            }
+    private fun addReview(bookId: Int, userId: Int, reviewText: String, rating: Int, token: String?) {
+        if (token.isNullOrEmpty()) {
+            Toast.makeText(this, "Authentication token is missing. Please log in again.", Toast.LENGTH_LONG).show()
+            return
+        }
 
-            override fun onFailure(call: Call<Void>, t: Throwable) {
-                Toast.makeText(this@AddReviewActivity, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
+        val reviewUrl = ApiClient.getInstance(this).getFullUrl("review")
+        val params = JSONObject()
+        params.put("book_id", bookId)
+        params.put("user_id", userId)
+        params.put("review_text", reviewText)
+        params.put("rating", rating)
+
+        val jsonObjectRequest = object : JsonObjectRequest(Request.Method.POST, reviewUrl, params,
+            Response.Listener {
+                Toast.makeText(this, "Review added successfully!", Toast.LENGTH_SHORT).show()
+                setResult(Activity.RESULT_OK)
+                finish()
+            },
+            Response.ErrorListener { error ->
+                val errorMsg = error.networkResponse?.let {
+                    String(it.data)
+                } ?: "Unknown error"
+                Toast.makeText(this, "Failed to add review: $errorMsg", Toast.LENGTH_SHORT).show()
+            }) {
+            override fun getHeaders(): MutableMap<String, String> {
+                val headers = HashMap<String, String>()
+                headers["x-access-token"] = token
+                return headers
             }
-        })
+        }
+
+        ApiClient.getInstance(this).addToRequestQueue(jsonObjectRequest)
     }
+
 }

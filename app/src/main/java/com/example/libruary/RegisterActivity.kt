@@ -6,11 +6,11 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.android.volley.Request
+import com.android.volley.Response
+import com.android.volley.toolbox.JsonObjectRequest
 import com.example.libruary.api.ApiClient
-import com.example.libruary.models.*
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
+import org.json.JSONObject
 
 class RegisterActivity : AppCompatActivity() {
 
@@ -21,6 +21,7 @@ class RegisterActivity : AppCompatActivity() {
         val usernameField = findViewById<EditText>(R.id.username)
         val passwordField = findViewById<EditText>(R.id.password)
         val registerButton = findViewById<Button>(R.id.registerButton)
+        val loginLink = findViewById<Button>(R.id.loginLink)
 
         registerButton.setOnClickListener {
             val username = usernameField.text.toString().trim()
@@ -29,28 +30,40 @@ class RegisterActivity : AppCompatActivity() {
             if (username.isNotEmpty() && password.isNotEmpty()) {
                 registerUser(username, password)
             } else {
-                Toast.makeText(this, "Please fill all fields", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.fill_all_fields), Toast.LENGTH_SHORT).show()
             }
+        }
+
+        loginLink.setOnClickListener {
+            startActivity(Intent(this, LoginActivity::class.java))
+            finish()
         }
     }
 
     private fun registerUser(username: String, password: String) {
-        val registerRequest = RegisterRequest(username, password)
-        ApiClient.apiService.registerUser(registerRequest).enqueue(object : Callback<RegisterResponse> {
-            override fun onResponse(call: Call<RegisterResponse>, response: Response<RegisterResponse>) {
-                if (response.isSuccessful) {
-                    Toast.makeText(this@RegisterActivity, "Registered successfully!", Toast.LENGTH_SHORT).show()
-                    startActivity(Intent(this@RegisterActivity, LoginActivity::class.java))
-                    finish()
-                } else {
-                    Toast.makeText(this@RegisterActivity, "Registration failed: ${response.message()}", Toast.LENGTH_SHORT).show()
-                }
-            }
+        val registerUrl = ApiClient.getInstance(this).getFullUrl("register")
+        val params = JSONObject()
+        params.put("username", username)
+        params.put("password", password)
 
-            override fun onFailure(call: Call<RegisterResponse>, t: Throwable) {
-                Toast.makeText(this@RegisterActivity, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
-            }
-        })
+        val jsonObjectRequest = JsonObjectRequest(Request.Method.POST, registerUrl, params,
+            Response.Listener { response ->
+                Toast.makeText(
+                    this@RegisterActivity,
+                    getString(R.string.registration_successful),
+                    Toast.LENGTH_SHORT
+                ).show()
+                startActivity(Intent(this@RegisterActivity, LoginActivity::class.java))
+                finish()
+            },
+            Response.ErrorListener { error ->
+                Toast.makeText(
+                    this@RegisterActivity,
+                    getString(R.string.registration_failed, error.message),
+                    Toast.LENGTH_SHORT
+                ).show()
+            })
+
+        ApiClient.getInstance(this).addToRequestQueue(jsonObjectRequest)
     }
-
 }
